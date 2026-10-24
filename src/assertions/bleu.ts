@@ -125,20 +125,21 @@ export function calculateBleuScore(
 
     const candidateNGramCounts = countNGrams(candidateNGrams);
 
-    // Clipped n-gram count against the best-matching reference
-    let maxClippedCount = 0;
+    // Clip each n-gram by its highest count in any single reference (Papineni et al., 2002),
+    // so different references can each supply different matching n-grams.
+    const maxReferenceCounts = new Map<string, number>();
     for (const referenceWords of referenceWordsList) {
-      const referenceNGramCounts = countNGrams(getNGrams(referenceWords, n));
-
-      let clippedCount = 0;
-      for (const [gram, count] of candidateNGramCounts) {
-        clippedCount += Math.min(count, referenceNGramCounts.get(gram) ?? 0);
+      for (const [gram, count] of countNGrams(getNGrams(referenceWords, n))) {
+        maxReferenceCounts.set(gram, Math.max(maxReferenceCounts.get(gram) ?? 0, count));
       }
-
-      maxClippedCount = Math.max(maxClippedCount, clippedCount);
     }
 
-    usableOrders.push({ precision: maxClippedCount / totalCount, weight: weights[n - 1] });
+    let clippedCount = 0;
+    for (const [gram, count] of candidateNGramCounts) {
+      clippedCount += Math.min(count, maxReferenceCounts.get(gram) ?? 0);
+    }
+
+    usableOrders.push({ precision: clippedCount / totalCount, weight: weights[n - 1] });
   }
 
   const bp = calculateBrevityPenalty(candidateWords.length, closestRefLength);

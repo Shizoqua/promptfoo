@@ -158,6 +158,16 @@ describe('BLEU score calculation', () => {
     expect(score).toBeGreaterThan(0.25);
   });
 
+  it('clips each n-gram by its highest count in any reference, matching NLTK', () => {
+    // Each reference covers a different half of the candidate. NLTK sentence_bleu gives
+    // 0.8333 for unigrams only and 0.8165 for unigrams and bigrams.
+    const candidate = 'the cat sat on the mat';
+    const references = ['the cat sat', 'on the mat'];
+
+    expect(calculateBleuScore(candidate, references, [1, 0, 0, 0])).toBeCloseTo(5 / 6, 4);
+    expect(calculateBleuScore(candidate, references, [0.5, 0.5, 0, 0])).toBeCloseTo(0.8165, 4);
+  });
+
   it('should use closest reference length for brevity penalty', () => {
     const references = ['The cat sat on mat.', 'Cat mat.', 'A cat is sitting on a mat.'];
     const candidate = 'The cat sat on mat.';
