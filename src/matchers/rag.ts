@@ -494,13 +494,12 @@ export async function matchesContextFaithfulness(
   let parsedVerdict = false;
   if (verdicts.includes(finalAnswer)) {
     verdicts = verdicts.slice(verdicts.indexOf(finalAnswer) + finalAnswer.length);
-    const parsedVerdicts = verdicts.split('.').filter((answer) => answer.trim() !== '');
-    if (
-      parsedVerdicts.length > 0 &&
-      parsedVerdicts.every((answer) => /\b(?:yes|no)\b/.test(answer))
-    ) {
+    // Read each yes/no in order so comma-separated or numbered lists ("Yes, No" or
+    // "1. Yes 2. No") count one verdict per statement, like the "Yes. No." example format.
+    const parsedVerdicts = verdicts.match(/\b(?:yes|no)\b/g) ?? [];
+    if (parsedVerdicts.length > 0) {
       parsedVerdict = true;
-      const unsupportedVerdicts = parsedVerdicts.filter((answer) => !answer.includes('yes')).length;
+      const unsupportedVerdicts = parsedVerdicts.filter((answer) => answer === 'no').length;
       const missingVerdicts = Math.max(0, statements.length - parsedVerdicts.length);
       score = 1 - (unsupportedVerdicts + missingVerdicts) / statements.length;
     }

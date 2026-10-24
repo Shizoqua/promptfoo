@@ -319,6 +319,26 @@ describe('matchesContextFaithfulness', () => {
     });
   });
 
+  it.each([
+    'Final verdict for each statement in order: Yes, Yes, No',
+    'Final verdict for each statement in order:\n1. Yes\n2. Yes\n3. No',
+  ])('should read one verdict per statement from %j', async (verdicts) => {
+    const callApiSpy = vi.spyOn(DefaultGradingProvider, 'callApi');
+    callApiSpy.mockReset();
+    callApiSpy
+      .mockResolvedValueOnce(createOutputResponse('Statement 1\nStatement 2\nStatement 3'))
+      .mockResolvedValueOnce(createOutputResponse(verdicts));
+
+    const result = await matchesContextFaithfulness('Query text', 'Output text', 'Context', 0.5);
+
+    expect(result).toMatchObject({
+      pass: true,
+      reason: 'Faithfulness 0.67 is >= 0.5',
+      score: expect.closeTo(0.67, 0.01),
+    });
+    expect(result.metadata?.graderError).toBeUndefined();
+  });
+
   it('should count missing line-by-line verdicts as unsupported', async () => {
     const query = 'Query text';
     const output = 'Output text';
